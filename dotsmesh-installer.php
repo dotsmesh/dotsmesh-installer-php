@@ -1,12 +1,19 @@
 <?php
 
+$devMode = false;
+
 $scheme = (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') || (isset($_SERVER['HTTP_X_FORWARDED_PROTOCOL']) && $_SERVER['HTTP_X_FORWARDED_PROTOCOL'] === 'https') || (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
 $host = isset($_SERVER['SERVER_NAME']) ? $_SERVER['SERVER_NAME'] : 'unknown';
 $defaultInstallDir = dirname(__DIR__) . DIRECTORY_SEPARATOR . 'dotsmesh';
 
-if (isset($_POST['dir'], $_POST['pass'])) {
-    $dir = rtrim($_POST['dir'], '\\/');
-    $password = $_POST['pass'];
+if ($devMode) {
+    $host = 'dotsmesh.example.com';
+}
+
+if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
+    $dir = rtrim($_POST['d'], '\\/');
+    $password = $_POST['p'];
+    $autoUpdate = (int) $_POST['u'];
     $throwError = function (string $message) {
         echo json_encode(['status' => 'error', 'message' => $message]);
         exit;
@@ -43,23 +50,23 @@ if (isset($_POST['dir'], $_POST['pass'])) {
     };
 
     // Copied from resources/index.php
-    $update = function ($dir) {
-        $makeRequest = function (string $method, string $url, array $data = []): string {
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-            curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-            if ($method === 'POST') {
-                curl_setopt($ch, CURLOPT_POST, 1);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-            }
-            $response = curl_exec($ch);
-            $error = curl_error($ch);
-            if (isset($error[0])) {
-                throw new \Exception('Request curl error: ' . $error . ' (1027)');
-            }
-            return $response;
-        };
+    $makeRequest = function (string $method, string $url, array $data = []): string {
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        if ($method === 'POST') {
+            curl_setopt($ch, CURLOPT_POST, 1);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+        }
+        $response = curl_exec($ch);
+        $error = curl_error($ch);
+        if (isset($error[0])) {
+            throw new \Exception('Request curl error: ' . $error . ' (1027)');
+        }
+        return $response;
+    };
+    $update = function (string $dir) use ($makeRequest) {
         $makeDir = function (string $dir) {
             if (!is_dir($dir)) {
                 if (!mkdir($dir, 0777, true)) {
@@ -102,6 +109,13 @@ if (isset($_POST['dir'], $_POST['pass'])) {
             $throwError('The directory "' . $dir . '" is not empty!');
         }
 
+        if ($autoUpdate) {
+            $response = $makeRequest('POST', 'https://downloads.dotsmesh.com/register-auto-update', ['host' => substr($host, 9)]);
+            if ($response !== 'ok') {
+                $throwError('Cannot connect to the Dots Mesh auto-update server! Please try again later.');
+            }
+        }
+
         $update($dir . '/source');
 
         $filename = $dir . '/server-data/objects/a/p/' . substr($host, 9);
@@ -117,12 +131,20 @@ return [
     \'serverDataDir\' => __DIR__ . \'/server-data\',
     \'serverLogsDir\' => __DIR__ . \'/server-logs\',
     \'hosts\' => [\'' . substr($host, 9) . '\'],
-    \'autoUpdate\' => true
+    \'autoUpdate\' => ' . ($autoUpdate ? 'true' : 'false') . '
 ];
 ');
 
         file_put_contents($publicIndexFilename, '<?php' . "\n\n" . 'require \'' . $dir . '/index.php\';');
-        // todo delete dotsmesh-installer.php
+        if (!$devMode) {
+            $installerFilename = __DIR__ . '/dotsmesh-installer.php';
+            if (is_file($installerFilename)) {
+                try {
+                    unlink($installerFilename);
+                } catch (\Exception $e) {
+                }
+            }
+        }
         echo json_encode(['status' => 'success']);
         exit;
     } catch (\Exception $e) {
@@ -135,6 +157,8 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
 ?><html>
 
 <head>
+    <meta charset="utf-8">
+    <title>Dots Mesh Installer</title>
     <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,minimal-ui">
     <style>
         html,
@@ -183,7 +207,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             align-items: center;
             justify-content: center;
             flex-direction: column;
-            max-width: 680px;
+            width: 680px;
             margin: 0 auto;
             padding: 0 15px 30px 15px;
             box-sizing: border-box;
@@ -215,7 +239,6 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             font-size: 15px;
             line-height: 160%;
             display: block;
-            padding-bottom: 2px;
             margin-top: -4px;
             max-width: 260px;
         }
@@ -225,10 +248,10 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             text-align: center;
             display: block;
             border: 0;
-            border-radius: 4px;
+            border-radius: 8px;
             width: 100%;
             padding: 0 13px;
-            height: 42px;
+            height: 48px;
             box-sizing: border-box;
             background-color: rgba(255, 255, 255, 0.08);
             border: 1px solid rgba(255, 255, 255, 0.2);
@@ -240,17 +263,65 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             border: 1px solid rgba(255, 255, 255, 0.3);
         }
 
+        .checkbox,
+        .checkbox * {
+            user-select: none;
+        }
+
+        .checkbox {
+            position: relative;
+            display: inline-block;
+            height: 42px;
+            text-align: left;
+            line-height: 42px;
+            padding-left: 60px;
+            box-sizing: border-box;
+        }
+
+        .checkbox span {
+            line-height: 42px;
+            display: inline-block;
+            font-size: 15px;
+        }
+
+        .checkbox>input[type="checkbox"] {
+            display: none;
+        }
+
+        .checkbox>input[type="checkbox"]+span:before {
+            content: "";
+            display: block;
+            position: absolute;
+            width: 42px;
+            height: 42px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: #fff;
+            line-height: 42px;
+            font-size: 20px;
+            font-weight: bold;
+            text-align: center;
+            margin-left: -60px;
+            cursor: default;
+            color: #fff;
+        }
+
+        .checkbox>input[type="checkbox"]:checked+span:before {
+            content: "✓";
+        }
+
         .button {
             user-select: none;
             font-size: 15px;
             display: inline-block;
-            border-radius: 4px;
+            border-radius: 8px;
             padding: 0 30px;
-            height: 42px;
+            min-height: 48px;
             box-sizing: border-box;
             background-color: rgba(255, 255, 255, 1);
             color: #111;
-            line-height: 42px;
+            line-height: 48px;
             text-align: center;
             cursor: pointer;
             text-decoration: none;
@@ -275,6 +346,14 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
 
         .button-2:active {
             background-color: rgba(255, 255, 255, 0.12);
+        }
+
+        .hint {
+            max-width: 360px;
+            font-size: 13px;
+            line-height: 24px;
+            text-align: center;
+            color: #999;
         }
     </style>
 
@@ -301,11 +380,13 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
                 alert('The administrator password is required!');
                 return;
             }
-            if (adminPassword.length < 0) {
+            if (adminPassword.length <= 6) {
                 element.focus();
-                alert('The administrator password is required!');
+                alert('The administrator password is must contain atleast 6 characters!');
                 return;
             }
+
+            var enableAutoUpdate = document.getElementById('install-autoupdate').checked;
 
             formElement.style.opacity = 0;
             setTimeout(async () => {
@@ -314,8 +395,9 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
                 installingElement.style.opacity = 1;
                 setTimeout(async () => {
                     let formData = new FormData();
-                    formData.append('dir', dir);
-                    formData.append('pass', adminPassword);
+                    formData.append('d', dir);
+                    formData.append('a', adminPassword);
+                    formData.append('u', enableAutoUpdate ? 1 : 0);
                     var response = await fetch(location.href, {
                         method: 'POST',
                         body: formData
@@ -369,16 +451,24 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
         </div>
     <?php } else { ?>
         <div class="window" id="form" style2="display:none;">
-            <div class="title">Ready to install?</div>
-            <div class="text" style="max-width:200px;">Let's make <strong><?= substr($host, 9) ?></strong> part of the platform!<br><br></div>
+            <div class="title">Let's make <?= substr($host, 9) ?><br>part of the platform!</div>
             <label class="label" for="install-dir">Install directory</label>
-            <input type="textbox" id="install-dir" class="textbox" value="<?= htmlentities($defaultInstallDir) ?>" />
+            <input type="textbox" id="install-dir" class="textbox" style="max-width:360px;" value="<?= htmlentities($defaultInstallDir) ?>" />
+            <div class="hint">The server source code and the users data will be stored here.</div>
             <br>
 
             <label class="label" for="install-pass">Administrator password</label>
             <input type="password" id="install-pass" class="textbox" />
+            <div class="hint">Will be used to log into the administrator's panel to reserve spaces for profiles and groups.</div>
+            <br>
+
+            <label class="checkbox"><input type="checkbox" id="install-autoupdate" /><span>Enable auto updates</span></label>
+            <div class="hint">If enabled, your hostname will be send to the Dots Mesh team, so they can ping your server when there is an update.</div>
+
             <br>
             <span class="button" onclick="install()">Install</span>
+            <br>
+            <br>
         </div>
         <div class="window" id="installing" style="display:none;opacity:0;">
             <div class="title">Installing</div>

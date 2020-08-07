@@ -20,23 +20,23 @@ $getConfig = function () {
 };
 
 // Copied to dotsmesh-installer.php
-$update = function ($dir) {
-    $makeRequest = function (string $method, string $url, array $data = []): string {
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
-        if ($method === 'POST') {
-            curl_setopt($ch, CURLOPT_POST, 1);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
-        }
-        $response = curl_exec($ch);
-        $error = curl_error($ch);
-        if (isset($error[0])) {
-            throw new \Exception('Request curl error: ' . $error . ' (1027)');
-        }
-        return $response;
-    };
+$makeRequest = function (string $method, string $url, array $data = []): string {
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    if ($method === 'POST') {
+        curl_setopt($ch, CURLOPT_POST, 1);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
+    }
+    $response = curl_exec($ch);
+    $error = curl_error($ch);
+    if (isset($error[0])) {
+        throw new \Exception('Request curl error: ' . $error . ' (1027)');
+    }
+    return $response;
+};
+$update = function (string $dir) use ($makeRequest) {
     $makeDir = function (string $dir) {
         if (!is_dir($dir)) {
             if (!mkdir($dir, 0777, true)) {
@@ -89,6 +89,9 @@ if (isset($_GET['update'])) {
     exit;
 } elseif (isset($_GET['host'])) {
     $config = $getConfig();
+    if (isset($_GET['admin'])) {
+        define('DOTSMESH_INSTALLER_CONFIG', $config); // Send data to the admin panel. Improve maybe?
+    }
     if (isset($config['serverDataDir'])) {
         if (!is_string($config['serverDataDir'])) {
             $showError('The serverDataDir config variable is not valid!');
