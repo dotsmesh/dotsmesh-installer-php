@@ -1,5 +1,7 @@
 <?php
 
+ini_set('max_execution_time', 300);
+
 $devMode = false;
 
 $scheme = (isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https') || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') || (isset($_SERVER['HTTP_X_FORWARDED_PROTOCOL']) && $_SERVER['HTTP_X_FORWARDED_PROTOCOL'] === 'https') || (isset($_SERVER['HTTPS']) && strtolower($_SERVER['HTTPS']) !== 'off') ? 'https' : 'http';
@@ -26,7 +28,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
     }
     $publicIndexFilename = __DIR__ . '/index.php';
     if (is_file($publicIndexFilename)) {
-        $throwError('There is a file called "index.php" in the current directory!');
+        $throwError('There is a file named "index.php" in the current directory!');
     }
 
     $pack = function (string $name, $value): string {
@@ -50,11 +52,11 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
     };
 
     // Copied from resources/index.php
-    $makeRequest = function (string $method, string $url, array $data = []): string {
+    $makeRequest = function (string $method, string $url, array $data = [], int $timeout = 30): string {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+        curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
         if ($method === 'POST') {
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
@@ -74,7 +76,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
                 }
             }
         };
-        $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/stable-php.json');
+        $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/stable-php.json', [], 240);
         $latestVersionData = json_decode($latestVersionData, true);
         if (isset($latestVersionData['version'], $latestVersionData['checksums'], $latestVersionData['urls'])) {
             $version = $latestVersionData['version'];
@@ -86,7 +88,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
                 $makeDir($targetDir);
                 foreach ($urls as $url) {
-                    $content = $makeRequest('GET', $url);
+                    $content = $makeRequest('GET', $url, [], 240);
                     if (strlen($content) > 0) {
                         // todo check checksums
                         file_put_contents($targetDir . '/dotsmesh.phar', $content);
@@ -110,7 +112,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         }
 
         if ($autoUpdate) {
-            $response = $makeRequest('POST', 'https://downloads.dotsmesh.com/register-auto-update', ['host' => substr($host, 9)]);
+            $response = $makeRequest('POST', 'https://downloads.dotsmesh.com/register-auto-update', ['host' => substr($host, 9)], 15);
             if ($response !== 'ok') {
                 $throwError('Cannot connect to the Dots Mesh auto-update server! Please try again later.');
             }
@@ -135,7 +137,7 @@ return [
 ];
 ');
 
-        file_put_contents($publicIndexFilename, '<?php' . "\n\n" . 'require \'' . $dir . '/index.php\';');
+        file_put_contents($publicIndexFilename, '<?php' . "\n\n" . 'require \'' . $dir . '/source/index.php\';');
         if (!$devMode) {
             $installerFilename = __DIR__ . '/dotsmesh-installer.php';
             if (is_file($installerFilename)) {
@@ -209,7 +211,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             flex-direction: column;
             width: 680px;
             margin: 0 auto;
-            padding: 0 15px 30px 15px;
+            padding: 0 15px 100px 15px;
             box-sizing: border-box;
             width: 100%;
         }
@@ -222,6 +224,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             font-size: 15px;
             line-height: 24px;
             text-align: center;
+            word-break: break-word;
         }
 
         .title {
@@ -380,7 +383,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
                 alert('The administrator password is required!');
                 return;
             }
-            if (adminPassword.length <= 6) {
+            if (adminPassword.length < 6) {
                 element.focus();
                 alert('The administrator password is must contain atleast 6 characters!');
                 return;
@@ -396,7 +399,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
                 setTimeout(async () => {
                     let formData = new FormData();
                     formData.append('d', dir);
-                    formData.append('a', adminPassword);
+                    formData.append('p', adminPassword);
                     formData.append('u', enableAutoUpdate ? 1 : 0);
                     var response = await fetch(location.href, {
                         method: 'POST',
@@ -437,7 +440,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
     <?php if (is_file(__DIR__ . '/index.php')) { ?>
         <div class="window">
             <div class="title">Already installed?</div>
-            <div class="text" style="max-width:360px;">There is a file called "index.php" alongside "dotsmesh-installer.php". This may indicate that your Dots Mesh host is installed.</div>
+            <div class="text" style="max-width:360px;">There is a file named "index.php" alongside "dotsmesh-installer.php". This indicates that your Dots Mesh host may already be installed.</div>
         </div>
     <?php } elseif (strpos($host, 'dotsmesh.') !== 0) { ?>
         <div class="window">
@@ -477,7 +480,7 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
         <div class="window" id="error" style="display:none;opacity:0;">
             <div class="title">Oops!</div>
             <div class="text" style="max-width:260px;">The following error occured while installing your Dots Mesh host:</div>
-            <div class="text" style="max-width:260px;" id="error-message"></div>
+            <div class="text" style="max-width:260px;" id="error-message"></div><br>
             <a class="button" onclick="location.reload()">Back</a>
         </div>
         <div class="window" id="success" style="display:none;opacity:0;">
