@@ -20,11 +20,11 @@ $getConfig = function () {
 };
 
 // Copied to dotsmesh-installer.php
-$makeRequest = function (string $method, string $url, array $data = []): string {
+$makeRequest = function (string $method, string $url, array $data = [], int $timeout = 30): string {
     $ch = curl_init();
     curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
     if ($method === 'POST') {
         curl_setopt($ch, CURLOPT_POST, 1);
         curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
@@ -44,7 +44,7 @@ $update = function (string $dir) use ($makeRequest) {
             }
         }
     };
-    $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/stable-php.json');
+    $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/stable-php.json', [], 240);
     $latestVersionData = json_decode($latestVersionData, true);
     if (isset($latestVersionData['version'], $latestVersionData['checksums'], $latestVersionData['urls'])) {
         $version = $latestVersionData['version'];
@@ -56,7 +56,7 @@ $update = function (string $dir) use ($makeRequest) {
         if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
             $makeDir($targetDir);
             foreach ($urls as $url) {
-                $content = $makeRequest('GET', $url);
+                $content = $makeRequest('GET', $url, [], 240);
                 if (strlen($content) > 0) {
                     // todo check checksums
                     file_put_contents($targetDir . '/dotsmesh.phar', $content);
