@@ -77,8 +77,8 @@ if (isset($_GET['update'])) {
         $lastUpdateTimeFilename = sys_get_temp_dir() . '/dotsmesh-update-' . md5(DOTSMESH_SOURCE_DIR);
         $lastUpdateTime = is_file($lastUpdateTimeFilename) ? (int) file_get_contents($lastUpdateTimeFilename) : 0;
         if ($lastUpdateTime + 600 < time()) {
-            $update(DOTSMESH_SOURCE_DIR);
             file_put_contents($lastUpdateTimeFilename, time());
+            $update(DOTSMESH_SOURCE_DIR);
             echo 'Updated successfully!';
         } else {
             echo 'Checked/Updated in the last 10 minutes!';
