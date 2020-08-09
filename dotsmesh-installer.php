@@ -1,5 +1,13 @@
 <?php
 
+/*
+ * Dots Mesh Installer
+ * http://about.dotsmesh.com
+ * Free to use under the GPL-3.0 license.
+ * 
+ * This is the file that the user should run on their machine.
+ */
+
 ini_set('max_execution_time', 300);
 
 $devMode = false;
@@ -39,6 +47,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         throw new \ErrorException($errorMessage, 0, $errorNumber, $errorFile, $errorLine);
     });
 
+    // Copied from resources/index.php
     $makeDir = function (string $dir) {
         if (!is_dir($dir)) {
             if (!mkdir($dir, 0777, true)) {
@@ -46,12 +55,6 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             }
         }
     };
-
-    $makeFileDir = function (string $filename) use ($makeDir) {
-        $makeDir(pathinfo($filename, PATHINFO_DIRNAME));
-    };
-
-    // Copied from resources/index.php
     $makeRequest = function (string $method, string $url, array $data = [], int $timeout = 30): string {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url . ($method === 'GET' && !empty($data) ? '?' . http_build_query($data) : ''));
@@ -68,14 +71,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         }
         return $response;
     };
-    $update = function (string $dir) use ($makeRequest) {
-        $makeDir = function (string $dir) {
-            if (!is_dir($dir)) {
-                if (!mkdir($dir, 0777, true)) {
-                    throw new \Exception('Cannot create dir (' . $dir . ')!');
-                }
-            }
-        };
+    $update = function (string $dir) use ($makeRequest, $makeDir) {
         $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/stable-php.json', [], 240);
         $latestVersionData = json_decode($latestVersionData, true);
         if (isset($latestVersionData['version'], $latestVersionData['checksums'], $latestVersionData['urls'])) {
@@ -84,17 +80,32 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             $urls = $latestVersionData['urls'];
             $targetDir = $dir . '/' . $version;
             $indexFilename = $dir . '/index.php';
-            $indexContent = '<?php' . "\n\n" .  'require __DIR__ . \'/' . $version . '/dotsmesh.phar\';';
+            $indexContent = '<?php' . "\n\n" .  'require __DIR__ . \'/' . $version . '/index.php\';';
             if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
                 foreach ($urls as $url) {
                     $content = $makeRequest('GET', $url, [], 240);
                     if (strlen($content) > 0) {
-                        $makeDir($targetDir);
                         // todo check checksums
-                        file_put_contents($targetDir . '/dotsmesh.phar', $content);
-                        // todo check checksums
-                        file_put_contents($indexFilename, $indexContent);
-                        return true;
+                        $tempFilename = tempnam(sys_get_temp_dir(), 'dotsmesh-installer');
+                        file_put_contents($tempFilename, $content);
+                        $zip = new \ZipArchive();
+                        if ($zip->open($tempFilename) === true) {
+                            $tempDir = $targetDir . '_temp_' . uniqid();
+                            $makeDir($tempDir);
+                            for ($i = 0; $i < $zip->numFiles; $i++) {
+                                $filename = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $zip->getNameIndex($i));
+                                $fullFilename = $tempDir . '/' . $filename;
+                                $makeDir(pathinfo($fullFilename, PATHINFO_DIRNAME));
+                                file_put_contents($fullFilename, $zip->getFromIndex($i));
+                            }
+                            $zip->close();
+                            rename($tempDir, $targetDir);
+                            unlink($tempFilename);
+                            file_put_contents($indexFilename, $indexContent);
+                            return true;
+                        } else {
+                            throw new \Exception('Cannot open zip file (' . $tempFilename . ')!');
+                        }
                     }
                 }
             }
@@ -120,7 +131,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         $update($dir . '/code');
 
         $filename = $dir . '/server-data/objects/a/p/' . substr($host, 9);
-        $makeFileDir($filename);
+        $makeDir(pathinfo($filename, PATHINFO_DIRNAME));
         file_put_contents($filename, $pack('0', password_hash($password, PASSWORD_DEFAULT)));
 
         $makeDir($dir . '/server-logs');
