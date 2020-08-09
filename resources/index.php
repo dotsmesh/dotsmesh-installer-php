@@ -12,7 +12,7 @@ $showError = function (string $text) {
 };
 
 $getConfig = function () {
-    $config = require DOTSMESH_SOURCE_DIR . '/../config.php';
+    $config = require __DIR__ . '/../config.php';
     if (is_array($config)) {
         return $config;
     }
@@ -52,7 +52,7 @@ $update = function (string $dir) use ($makeRequest) {
         $urls = $latestVersionData['urls'];
         $targetDir = $dir . '/' . $version;
         $indexFilename = $dir . '/index.php';
-        $indexContent = '<?php' . "\n\n" . 'define(\'DOTSMESH_SOURCE_DIR\', __DIR__);' . "\n\n" . 'require DOTSMESH_SOURCE_DIR . \'/' . $version . '/dotsmesh.phar\';';
+        $indexContent = '<?php' . "\n\n" .  'require __DIR__ . \'/' . $version . '/dotsmesh.phar\';';
         if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
             $makeDir($targetDir);
             foreach ($urls as $url) {
@@ -82,11 +82,11 @@ if (isset($_GET['update'])) {
         echo 'Auto-update is disabled!';
     }
     if ($update) {
-        $lastUpdateTimeFilename = sys_get_temp_dir() . '/dotsmesh-update-' . md5(DOTSMESH_SOURCE_DIR);
+        $lastUpdateTimeFilename = sys_get_temp_dir() . '/dotsmesh-update-' . md5(__DIR__);
         $lastUpdateTime = is_file($lastUpdateTimeFilename) ? (int) file_get_contents($lastUpdateTimeFilename) : 0;
         if ($lastUpdateTime + 600 < time()) {
             file_put_contents($lastUpdateTimeFilename, time());
-            $update(DOTSMESH_SOURCE_DIR);
+            $update(__DIR__);
             echo 'Updated successfully!';
         } else {
             echo 'Checked/Updated in the last 10 minutes!';
@@ -96,20 +96,12 @@ if (isset($_GET['update'])) {
 } elseif (isset($_GET['host'])) {
     $config = $getConfig();
     if (isset($_GET['admin'])) {
-        define('DOTSMESH_INSTALLER_CONFIG', $config); // Send data to the admin panel. Improve maybe?
+        // Send data to the admin panel. Improve maybe?
+        define('DOTSMESH_INSTALLER_CONFIG', $config);
+        define('DOTSMESH_INSTALLER_DIR', realpath(__DIR__ . '/..'));
     }
-    if (isset($config['serverDataDir'])) {
-        if (!is_string($config['serverDataDir'])) {
-            $showError('The serverDataDir config variable is not valid!');
-        }
-        define('DOTSMESH_SERVER_DATA_DIR', $config['serverDataDir']);
-    }
-    if (isset($config['serverLogsDir'])) {
-        if (!is_string($config['serverLogsDir'])) {
-            $showError('The serverLogsDir config variable is not valid!');
-        }
-        define('DOTSMESH_SERVER_LOGS_DIR', $config['serverLogsDir']);
-    }
+    define('DOTSMESH_SERVER_DATA_DIR', realpath(__DIR__ . '/../server-data'));
+    define('DOTSMESH_SERVER_LOGS_DIR', realpath(__DIR__ . '/../server-logs'));
     if (isset($config['hosts'])) {
         if (!is_array($config['hosts'])) {
             $showError('The hosts config variable is not valid!');

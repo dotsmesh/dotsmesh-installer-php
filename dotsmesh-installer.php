@@ -84,7 +84,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             $urls = $latestVersionData['urls'];
             $targetDir = $dir . '/' . $version;
             $indexFilename = $dir . '/index.php';
-            $indexContent = '<?php' . "\n\n" . 'define(\'DOTSMESH_SOURCE_DIR\', __DIR__);' . "\n\n" . 'require DOTSMESH_SOURCE_DIR . \'/' . $version . '/dotsmesh.phar\';';
+            $indexContent = '<?php' . "\n\n" .  'require __DIR__ . \'/' . $version . '/dotsmesh.phar\';';
             if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
                 $makeDir($targetDir);
                 foreach ($urls as $url) {
@@ -118,7 +118,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             }
         }
 
-        $update($dir . '/source');
+        $update($dir . '/code');
 
         $filename = $dir . '/server-data/objects/a/p/' . substr($host, 9);
         $makeFileDir($filename);
@@ -130,15 +130,13 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         file_put_contents($filename, '<?php
 
 return [
-    \'serverDataDir\' => __DIR__ . \'/server-data\',
-    \'serverLogsDir\' => __DIR__ . \'/server-logs\',
     \'hosts\' => [\'' . substr($host, 9) . '\'],
     \'autoUpdate\' => ' . ($autoUpdate ? 'true' : 'false') . ',
     \'updateSecret\' => \'' . md5(uniqid()) . '\'
 ];
 ');
 
-        file_put_contents($publicIndexFilename, '<?php' . "\n\n" . 'require \'' . $dir . '/source/index.php\';');
+        file_put_contents($publicIndexFilename, '<?php' . "\n\n" . 'require \'' . $dir . '/code/index.php\';');
         if (!$devMode) {
             $installerFilename = __DIR__ . '/dotsmesh-installer.php';
             if (is_file($installerFilename)) {
