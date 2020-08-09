@@ -86,10 +86,10 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             $indexFilename = $dir . '/index.php';
             $indexContent = '<?php' . "\n\n" .  'require __DIR__ . \'/' . $version . '/dotsmesh.phar\';';
             if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
-                $makeDir($targetDir);
                 foreach ($urls as $url) {
                     $content = $makeRequest('GET', $url, [], 240);
                     if (strlen($content) > 0) {
+                        $makeDir($targetDir);
                         // todo check checksums
                         file_put_contents($targetDir . '/dotsmesh.phar', $content);
                         // todo check checksums
@@ -106,8 +106,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
 
         $makeDir($dir);
 
-        $files = scandir($dir);
-        if (sizeof($files) > 2) {
+        if (is_dir($dir) && sizeof(scandir($dir)) > 2) {
             $throwError('The directory "' . $dir . '" is not empty!');
         }
 
