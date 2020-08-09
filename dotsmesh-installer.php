@@ -2,7 +2,7 @@
 
 /*
  * Dots Mesh Installer
- * http://about.dotsmesh.com
+ * https://github.com/dotsmesh/dotsmesh-installer-php
  * Free to use under the GPL-3.0 license.
  * 
  * This is the file that the user should run on their machine.
