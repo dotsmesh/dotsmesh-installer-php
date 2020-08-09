@@ -133,7 +133,8 @@ return [
     \'serverDataDir\' => __DIR__ . \'/server-data\',
     \'serverLogsDir\' => __DIR__ . \'/server-logs\',
     \'hosts\' => [\'' . substr($host, 9) . '\'],
-    \'autoUpdate\' => ' . ($autoUpdate ? 'true' : 'false') . '
+    \'autoUpdate\' => ' . ($autoUpdate ? 'true' : 'false') . ',
+    \'updateSecret\' => \'' . md5(uniqid()) . '\'
 ];
 ');
 

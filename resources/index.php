@@ -73,7 +73,15 @@ $update = function (string $dir) use ($makeRequest) {
 if (isset($_GET['update'])) {
     $config = $getConfig();
     header('Content-Type: text/plain; charset=utf-8');
+    $update = false;
     if (isset($config['autoUpdate']) && $config['autoUpdate']) {
+        $update = true;
+    } else if (isset($config['updateSecret'], $_GET['secret']) && (string) $config['updateSecret'] === (string) $_GET['secret']) {
+        $update = true;
+    } else {
+        echo 'Auto-update is disabled!';
+    }
+    if ($update) {
         $lastUpdateTimeFilename = sys_get_temp_dir() . '/dotsmesh-update-' . md5(DOTSMESH_SOURCE_DIR);
         $lastUpdateTime = is_file($lastUpdateTimeFilename) ? (int) file_get_contents($lastUpdateTimeFilename) : 0;
         if ($lastUpdateTime + 600 < time()) {
@@ -83,8 +91,6 @@ if (isset($_GET['update'])) {
         } else {
             echo 'Checked/Updated in the last 10 minutes!';
         }
-    } else {
-        echo 'Auto-update is disabled!';
     }
     exit;
 } elseif (isset($_GET['host'])) {
