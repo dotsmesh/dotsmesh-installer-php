@@ -131,5 +131,6 @@ if (isset($_GET['update'])) {
     }
     require __DIR__ . '/dotsmesh-server-php/app/index.php';
 } else {
+    define('DOTSMESH_WEB_APP_LOGS_DIR', $installerDir . '/web-app-logs');
     require __DIR__ . '/dotsmesh-web-app/app/index.php';
 }

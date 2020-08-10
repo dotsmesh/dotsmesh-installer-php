@@ -135,6 +135,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         file_put_contents($filename, $pack('0', password_hash($password, PASSWORD_DEFAULT)));
 
         $makeDir($dir . '/server-logs');
+        $makeDir($dir . '/web-app-logs');
 
         $filename = $dir . '/config.php';
         file_put_contents($filename, '<?php
