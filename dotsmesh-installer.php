@@ -71,8 +71,8 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
         }
         return $response;
     };
-    $update = function (string $dir) use ($makeRequest, $makeDir) {
-        $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/stable-php.json', [], 240);
+    $update = function (string $dir, $releaseChannel = 'stable') use ($makeRequest, $makeDir) {
+        $latestVersionData = $makeRequest('GET', 'https://downloads.dotsmesh.com/' . $releaseChannel . '-php.json', [], 240);
         $latestVersionData = json_decode($latestVersionData, true);
         if (isset($latestVersionData['version'], $latestVersionData['checksums'], $latestVersionData['urls'])) {
             $version = $latestVersionData['version'];
@@ -82,31 +82,40 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
             $indexFilename = $dir . '/index.php';
             $indexContent = '<?php' . "\n\n" .  'require __DIR__ . \'/' . $version . '/index.php\';';
             if (!is_file($indexFilename) || file_get_contents($indexFilename) !== $indexContent) {
-                foreach ($urls as $url) {
-                    $content = $makeRequest('GET', $url, [], 240);
-                    if (strlen($content) > 0) {
-                        // todo check checksums
-                        $tempFilename = tempnam(sys_get_temp_dir(), 'dotsmesh-installer');
-                        file_put_contents($tempFilename, $content);
-                        $zip = new \ZipArchive();
-                        if ($zip->open($tempFilename) === true) {
-                            $tempDir = $targetDir . '_temp_' . uniqid();
-                            $makeDir($tempDir);
-                            for ($i = 0; $i < $zip->numFiles; $i++) {
-                                $filename = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $zip->getNameIndex($i));
-                                $fullFilename = $tempDir . '/' . $filename;
-                                $makeDir(pathinfo($fullFilename, PATHINFO_DIRNAME));
-                                file_put_contents($fullFilename, $zip->getFromIndex($i));
+                $sourceExists = false;
+                if (is_dir($targetDir)) {
+                    $sourceExists = true;
+                } else {
+                    foreach ($urls as $url) {
+                        $content = $makeRequest('GET', $url, [], 240);
+                        if (strlen($content) > 0) {
+                            // todo check checksums
+                            $tempFilename = tempnam(sys_get_temp_dir(), 'dotsmesh-installer');
+                            file_put_contents($tempFilename, $content);
+                            $zip = new \ZipArchive();
+                            if ($zip->open($tempFilename)) {
+                                $tempDir = $targetDir . '_temp_' . uniqid();
+                                $makeDir($tempDir);
+                                for ($i = 0; $i < $zip->numFiles; $i++) {
+                                    $filename = str_replace(['\\', '/'], DIRECTORY_SEPARATOR, $zip->getNameIndex($i));
+                                    $fullFilename = $tempDir . '/' . $filename;
+                                    $makeDir(pathinfo($fullFilename, PATHINFO_DIRNAME));
+                                    file_put_contents($fullFilename, $zip->getFromIndex($i));
+                                }
+                                $zip->close();
+                                rename($tempDir, $targetDir);
+                                unlink($tempFilename);
+                                $sourceExists = true;
+                                break;
+                            } else {
+                                throw new \Exception('Cannot open zip file (' . $tempFilename . ')!');
                             }
-                            $zip->close();
-                            rename($tempDir, $targetDir);
-                            unlink($tempFilename);
-                            file_put_contents($indexFilename, $indexContent);
-                            return true;
-                        } else {
-                            throw new \Exception('Cannot open zip file (' . $tempFilename . ')!');
                         }
                     }
+                }
+                if ($sourceExists) {
+                    file_put_contents($indexFilename, $indexContent);
+                    return true;
                 }
             }
         }
