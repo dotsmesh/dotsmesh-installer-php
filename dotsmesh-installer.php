@@ -139,7 +139,7 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
 
         $update($dir . '/code');
 
-        $filename = $dir . '/server-data/' . md5($host) . '/objects/a/pd';
+        $filename = $dir . '/server-data/' . md5(substr($host, 9)) . '/objects/a/pd';
         $makeDir(pathinfo($filename, PATHINFO_DIRNAME));
         file_put_contents($filename, $pack('0', password_hash($password, PASSWORD_DEFAULT)));
 
