@@ -380,6 +380,23 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
     </style>
 
     <script>
+        function toggleCheckbox(event) {
+            var node = event.currentTarget
+
+            var state = node.getAttribute('aria-checked').toLowerCase()
+
+            if (event.type === 'click' || 
+            (event.type === 'keydown' && event.keyCode === 32)) {
+                if (state === 'true') {
+                    node.setAttribute('aria-checked', 'false')
+document.getElementById('install-autoupdate').checked=false
+                } else {
+                    node.setAttribute('aria-checked', 'true')
+document.getElementById('install-autoupdate').checked=true
+                }
+            }
+        }
+
         var animationTime = 100;
         var install = () => {
             var formElement = document.getElementById('form');
@@ -484,11 +501,11 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             <div class="hint">Will be used to log into the administrator's panel to reserve spaces for profiles and groups.</div>
             <br>
 
-            <label class="checkbox"><input type="checkbox" id="install-autoupdate" /><span>Enable auto updates</span></label>
+             <label class="checkbox"><input type="checkbox" id="install-autoupdate" /><span role="checkbox" tabindex=0 aria-checked=document.getElementById('install-autoupdate').checked onkeydown="toggleCheckbox(event)" onclick="toggleCheckbox(event)">Enable auto updates</span></label>
             <div class="hint">If enabled, your hostname will be send to the Dots Mesh team, so they can ping your server when there is an update.</div>
 
             <br>
-            <span class="button" onclick="install()">Install</span>
+             <span class="button" role="button" tabIndex=0 onclick="install()">Install</span>
             <br>
             <br>
         </div>
@@ -500,12 +517,12 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             <div class="title">Oops!</div>
             <div class="text" style="max-width:260px;">The following error occured while installing your Dots Mesh host:</div>
             <div class="text" style="max-width:260px;" id="error-message"></div><br>
-            <a class="button" onclick="location.reload()">Back</a>
+             <a class="button" role="button" tabIndex=0 onclick="location.reload()">Back</a>
         </div>
         <div class="window" id="success" style="display:none;opacity:0;">
             <div class="title">Success!</div>
             <div class="text" style="max-width:260px;">You're now an owner of a Dots Mesh host. Visit the administrator panel to create your first profile.</div><br>
-            <a class="button" href="https://<?= $host ?>?host&admin">Administrator panel</a>
+             <a class="button" role="button" tabIndex=0 href="https://<?= $host ?>?host&admin">Administrator panel</a>
         </div>
     <?php } ?>
 </body>
