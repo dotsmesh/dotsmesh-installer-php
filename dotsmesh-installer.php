@@ -421,7 +421,7 @@ document.getElementById('install-autoupdate').checked=true
             }
             if (adminPassword.length < 6) {
                 element.focus();
-                alert('The administrator password is must contain atleast 6 characters!');
+                alert('The administrator password must contain at least 6 characters!');
                 return;
             }
 
@@ -480,12 +480,12 @@ document.getElementById('install-autoupdate').checked=true
         </div>
     <?php } elseif (strpos($host, 'dotsmesh.') !== 0) { ?>
         <div class="window">
-            <div class="title">A litte fix is needed!</div>
+            <div class="title">A little fix is needed!</div>
             <div class="text" style="max-width:360px;">There is a strict requirement for the domain name of your Dots Mesh host. Currently it's <strong><?= $host ?></strong>. It must look like this: <strong>dotsmesh.example.com</strong>.<br>It must start with "dotsmesh." and the profiles created later will end with ".example.com".</div>
         </div>
     <?php } elseif ($scheme !== 'https') { ?>
         <div class="window">
-            <div class="title">A litte fix is needed!</div>
+            <div class="title">A little fix is needed!</div>
             <div class="text" style="max-width:360px;">Your connection is not secure!<br>HTTPS is a requirement!</div>
         </div>
     <?php } else { ?>
