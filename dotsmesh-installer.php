@@ -20,6 +20,18 @@ if ($devMode) {
     $host = 'dotsmesh.example.com';
 }
 
+$env = null;
+if (is_file('dotsmesh-installer-environment.json')) {
+    $env = json_decode(file_get_contents('dotsmesh-installer-environment.json'), true);
+}
+if (!is_array($env)) {
+    $env = [];
+}
+
+if (!empty($env['dir'])) {
+    $_POST['d'] = $env['dir'];
+}
+
 if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
     $dir = rtrim($_POST['d'], '\\/');
     $password = $_POST['p'];
@@ -389,11 +401,15 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
             var successElement = document.getElementById('success');
 
             var element = document.getElementById('install-dir');
-            var dir = element.value.trim();
-            if (dir.length === 0) {
-                element.focus();
-                alert('You must specify an install directory!');
-                return;
+            if (element !== null) {
+                var dir = element.value.trim();
+                if (dir.length === 0) {
+                    element.focus();
+                    alert('You must specify an install directory!');
+                    return;
+                }
+            } else {
+                var dir = null;
             }
             var element = document.getElementById('install-pass');
             var adminPassword = element.value.trim();
@@ -474,10 +490,13 @@ $logo = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/
     <?php } else { ?>
         <div class="window" id="form" style2="display:none;">
             <div class="title">Let's make <?= substr($host, 9) ?><br>part of the platform!</div>
-            <label class="label" for="install-dir">Install directory</label>
-            <input type="textbox" id="install-dir" class="textbox" style="max-width:360px;" value="<?= htmlentities($defaultInstallDir) ?>" />
-            <div class="hint">The server source code and the users data will be stored here.</div>
-            <br>
+
+            <?php if (empty($env['dir'])) { ?>
+                <label class="label" for="install-dir">Install directory</label>
+                <input type="textbox" id="install-dir" class="textbox" style="max-width:360px;" value="<?= htmlentities($defaultInstallDir) ?>" />
+                <div class="hint">The source code and the users data will be stored here.</div>
+                <br>
+            <?php } ?>
 
             <label class="label" for="install-pass">Administrator password</label>
             <input type="password" id="install-pass" class="textbox" />
