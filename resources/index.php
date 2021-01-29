@@ -94,6 +94,9 @@ if (isset($_GET['update'])) {
                 }
                 if ($sourceExists) {
                     file_put_contents($indexFilename, $indexContent);
+                    if (function_exists('opcache_reset')) {
+                        opcache_reset();
+                    }
                     return true;
                 }
             }

@@ -127,6 +127,9 @@ if (isset($_POST['d'], $_POST['p'], $_POST['u'])) {
                 }
                 if ($sourceExists) {
                     file_put_contents($indexFilename, $indexContent);
+                    if (function_exists('opcache_reset')) {
+                        opcache_reset();
+                    }
                     return true;
                 }
             }
@@ -177,6 +180,9 @@ return [
                 } catch (\Exception $e) {
                 }
             }
+        }
+        if (function_exists('opcache_reset')) {
+            opcache_reset();
         }
         echo json_encode(['status' => 'success']);
         exit;
