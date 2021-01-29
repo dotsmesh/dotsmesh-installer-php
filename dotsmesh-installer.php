@@ -20,9 +20,11 @@ if ($devMode) {
     $host = 'dotsmesh.example.com';
 }
 
+$installerEnvironmentFilename = __DIR__ . '/dotsmesh-installer-environment.json';
+
 $env = null;
-if (is_file('dotsmesh-installer-environment.json')) {
-    $env = json_decode(file_get_contents('dotsmesh-installer-environment.json'), true);
+if (is_file($installerEnvironmentFilename)) {
+    $env = json_decode(file_get_contents($installerEnvironmentFilename), true);
 }
 if (!is_array($env)) {
     $env = [];
@@ -177,6 +179,12 @@ return [
             if (is_file($installerFilename)) {
                 try {
                     unlink($installerFilename);
+                } catch (\Exception $e) {
+                }
+            }
+            if (is_file($installerEnvironmentFilename)) {
+                try {
+                    unlink($installerEnvironmentFilename);
                 } catch (\Exception $e) {
                 }
             }
