@@ -43,7 +43,7 @@ if (isset($_GET['update'])) {
             curl_setopt($ch, CURLOPT_POST, 1);
             curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data));
         }
-        $response = curl_exec($ch);
+        $response = (string)curl_exec($ch);
         $error = curl_error($ch);
         if (isset($error[0])) {
             throw new \Exception('Request curl error: ' . $error . ' (1027)');
